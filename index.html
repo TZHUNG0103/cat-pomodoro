@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>貓咪日常養成與陪伴計時器</title>
+  <style>
+    :root {
+      --bg-color: #fdfbf7;
+      --card-bg: #ffffff;
+      --primary: #ff8e8e;
+      --primary-hover: #ff6b6b;
+      --secondary: #74c0fc;
+      --accent: #ffd43b;
+      --text: #495057;
+      --shadow: rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "Microsoft JhengHei";
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 25px var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    /* 貓咪區域 */
+    .cat-avatar-container {
+      position: relative;
+      width: 180px;
+      height: 180px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      margin: 15px 0;
+    }
+
+    .cat-avatar {
+      font-size: 100px;
+      transition: transform 0.2s ease, filter 0.2s ease;
+      user-select: none;
+    }
+
+    .cat-avatar:hover {
+      transform: scale(1.08);
+    }
+
+    .speech-bubble {
+      position: absolute;
+      top: -15px;
+      background: #fff3bf;
+      border: 2px solid #ffe066;
+      padding: 8px 12px;
+      border-radius: 15px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #5c940d;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      animation: float 3s infinite ease-in-out;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* 狀態條 */
+    .status-group {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    .status-item {
+      margin-bottom: 10px;
+    }
+
+    .status-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 12px;
+      background: #e9ecef;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 50%;
+      transition: width 0.3s ease;
+      border-radius: 10px;
+    }
+
+    .fill-hunger { background: #ff922b; }
+    .fill-mood { background: #ff6b6b; }
+    .fill-clean { background: #339af0; }
+
+    /* 操作按鈕組 */
+    .actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 12px;
+      font-weight: bold;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+
+    .btn-secondary { background: var(--secondary); color: white; }
+    .btn-secondary:hover { background: #4dabf7; }
+
+    .btn-accent { background: var(--accent); color: #333; }
+    .btn-accent:hover { background: #fcc419; }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 計時器區域 */
+    .timer-display {
+      font-size: 3.5rem;
+      font-weight: bold;
+      color: var(--text);
+      margin: 20px 0;
+      letter-spacing: 2px;
+    }
+
+    .can-counter {
+      background: #fff4e6;
+      border: 1px solid #ffe8cc;
+      color: #d9480f;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .timer-controls {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    /* 浮動粒子效果 */
+    .particle {
+      position: absolute;
+      pointer-events: none;
+      animation: popup 1s forwards ease-out;
+      font-size: 1.5rem;
+    }
+
+    @keyframes popup {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-50px) scale(1.5); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 貓咪養成卡片 -->
+    <div class="card">
+      <h2>🐾 陪伴貓咪：喜拿</h2>
+      
+      <div class="cat-avatar-container" id="catClickArea">
+        <div class="speech-bubble" id="speechBubble">喵～主人加油專注喔！</div>
+        <div class="cat-avatar" id="catAvatar">🐱</div>
+      </div>
+
+      <div class="status-group">
+        <div class="status-item">
+          <div class="status-label">
+            <span>🍗 飽足感</span>
+            <span id="hungerText">50/100</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill fill-hunger" id="hungerBar"></div></div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <span>❤️ 心情值</span>
+            <span id="moodText">80/100</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill fill-mood" id="moodBar"></div></div>
+        </div>
+
+        <div class="status-item">
+          <div class="status-label">
+            <span>✨ 潔淨度</span>
+            <span id="cleanText">70/100</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill fill-clean" id="cleanBar"></div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="feedBtn">🥫 餵食 (-1罐)</button>
+        <button class="btn btn-accent" id="petBtn">✋ 摸摸</button>
+        <button class="btn btn-secondary" id="groomBtn">🧼 梳毛</button>
+      </div>
+    </div>
+
+    <!-- 專注計時器卡片 -->
+    <div class="card">
+      <h2>⏱️ 專注番茄鐘</h2>
+      
+      <div class="can-counter">
+        擁有貓罐頭：<span id="canCount">0</span> 🥫
+      </div>
+
+      <div class="timer-display" id="timerDisplay">25:00</div>
+
+      <div class="timer-controls">
+        <button class="btn btn-primary" id="startTimerBtn">開始專注</button>
+        <button class="btn btn-secondary" id="pauseTimerBtn" disabled>暫停</button>
+        <button class="btn btn-accent" id="resetTimerBtn">重置</button>
+      </div>
+
+      <div style="margin-top: 25px; font-size: 0.85rem; color: #868e96; text-align: center;">
+        💡 提示：每完成 25 分鐘專注，即可獲得 1 個貓罐頭獎勵！
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 遊戲數據狀態
+    let state = {
+      hunger: 50,
+      mood: 80,
+      clean: 70,
+      cans: 2,
+      timerSeconds: 25 * 60,
+      isTimerRunning: false
+    };
+
+    let timerInterval = null;
+
+    // 貓咪動態與語錄
+    const quotes = [
+      "喵～今天也要加油喔！",
+      "咕嚕咕嚕...真舒服",
+      "主人專注時最帥/最美了！",
+      "肚子有點餓了喵...",
+      "陪我玩一會兒嘛！",
+      "專注完記得休息一下喔～"
+    ];
+
+    // DOM 元素引用
+    const catAvatar = document.getElementById('catAvatar');
+    const speechBubble = document.getElementById('speechBubble');
+    const hungerBar = document.getElementById('hungerBar');
+    const moodBar = document.getElementById('moodBar');
+    const cleanBar = document.getElementById('cleanBar');
+    const hungerText = document.getElementById('hungerText');
+    const moodText = document.getElementById('moodText');
+    const cleanText = document.getElementById('cleanText');
+    const canCount = document.getElementById('canCount');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startTimerBtn = document.getElementById('startTimerBtn');
+    const pauseTimerBtn = document.getElementById('pauseTimerBtn');
+    const resetTimerBtn = document.getElementById('resetTimerBtn');
+    const feedBtn = document.getElementById('feedBtn');
+    const petBtn = document.getElementById('petBtn');
+    const groomBtn = document.getElementById('groomBtn');
+    const catClickArea = document.getElementById('catClickArea');
+
+    // 初始化與存檔載入
+    function init() {
+      const saved = localStorage.getItem('cat_pet_data');
+      if (saved) {
+        state = { ...state, ...JSON.parse(saved) };
+      }
+      updateUI();
+      // 時間流逝消耗狀態 (每 15 秒稍微變餓/無聊)
+      setInterval(passiveDecay, 15000);
+    }
+
+    function saveState() {
+      localStorage.setItem('cat_pet_data', JSON.stringify({
+        hunger: state.hunger,
+        mood: state.mood,
+        clean: state.clean,
+        cans: state.cans
+      }));
+    }
+
+    function updateUI() {
+      // 限制範圍 0 - 100
+      state.hunger = Math.min(100, Math.max(0, state.hunger));
+      state.mood = Math.min(100, Math.max(0, state.mood));
+      state.clean = Math.min(100, Math.max(0, state.clean));
+
+      // 更新進度條與數值
+      hungerBar.style.width = state.hunger + '%';
+      moodBar.style.width = state.mood + '%';
+      cleanBar.style.width = state.clean + '%';
+
+      hungerText.textContent = `${state.hunger}/100`;
+      moodText.textContent = `${state.mood}/100`;
+      cleanText.textContent = `${state.clean}/100`;
+      canCount.textContent = state.cans;
+
+      // 貓咪表情動態更新
+      if (state.hunger < 30) {
+        catAvatar.textContent = '😿';
+      } else if (state.mood > 80) {
+        catAvatar.textContent = '😸';
+      } else if (state.clean < 40) {
+        catAvatar.textContent = '🙀';
+      } else {
+        catAvatar.textContent = '🐱';
+      }
+
+      saveState();
+    }
+
+    function showParticle(symbol) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.textContent = symbol;
+      particle.style.left = (catClickArea.offsetLeft + 60 + Math.random() * 40 - 20) + 'px';
+      particle.style.top = (catClickArea.offsetTop + 40) + 'px';
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 1000);
+    }
+
+    function speak(text) {
+      speechBubble.textContent = text || quotes[Math.floor(Math.random() * quotes.length)];
+    }
+
+    // 互動事件
+    feedBtn.addEventListener('click', () => {
+      if (state.cans > 0) {
+        state.cans--;
+        state.hunger = Math.min(100, state.hunger + 30);
+        state.mood = Math.min(100, state.mood + 10);
+        showParticle('🍗');
+        speak("好美味的罐罐喵！");
+        updateUI();
+      } else {
+        speak("罐頭不夠了，快去完成專注計時賺取吧！");
+      }
+    });
+
+    petBtn.addEventListener('click', () => {
+      state.mood = Math.min(100, state.mood + 15);
+      showParticle('❤️');
+      speak("呼嚕呼嚕～最喜歡主人了！");
+      updateUI();
+    });
+
+    groomBtn.addEventListener('click', () => {
+      state.clean = Math.min(100, state.clean + 25);
+      showParticle('✨');
+      speak("毛髮變得香噴噴又乾淨了！");
+      updateUI();
+    });
+
+    catClickArea.addEventListener('click', () => {
+      showParticle('🐾');
+      speak();
+    });
+
+    // 自然消耗
+    function passiveDecay() {
+      state.hunger = Math.max(0, state.hunger - 2);
+      state.mood = Math.max(0, state.mood - 1);
+      state.clean = Math.max(0, state.clean - 1);
+      updateUI();
+    }
+
+    // 番茄鐘計時器邏輯
+    function updateTimerDisplay() {
+      const mins = Math.floor(state.timerSeconds / 60).toString().padStart(2, '0');
+      const secs = (state.timerSeconds % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${mins}:${secs}`;
+    }
+
+    startTimerBtn.addEventListener('click', () => {
+      if (!state.isTimerRunning) {
+        state.isTimerRunning = true;
+        startTimerBtn.disabled = true;
+        pauseTimerBtn.disabled = false;
+        
+        timerInterval = setInterval(() => {
+          if (state.timerSeconds > 0) {
+            state.timerSeconds--;
+            updateTimerDisplay();
+          } else {
+            // 計時完成
+            clearInterval(timerInterval);
+            state.isTimerRunning = false;
+            state.cans += 1;
+            state.timerSeconds = 25 * 60;
+            startTimerBtn.disabled = false;
+            pauseTimerBtn.disabled = true;
+            updateTimerDisplay();
+            updateUI();
+            speak("🎉 太棒了！完成 25 分鐘專注，獲得 1 個貓罐頭！");
+            alert("🎉 專注時間結束！恭喜你獲得 1 個貓罐頭！");
+          }
+        }, 1000);
+      }
+    });
+
+    pauseTimerBtn.addEventListener('click', () => {
+      if (state.isTimerRunning) {
+        clearInterval(timerInterval);
+        state.isTimerRunning = false;
+        startTimerBtn.disabled = false;
+        pauseTimerBtn.disabled = true;
+      }
+    });
+
+    resetTimerBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      state.isTimerRunning = false;
+      state.timerSeconds = 25 * 60;
+      startTimerBtn.disabled = false;
+      pauseTimerBtn.disabled = true;
+      updateTimerDisplay();
+    });
+
+    // 啟動頁面
+    init();
+  </script>
+</body>
+</html>
